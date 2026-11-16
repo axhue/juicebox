@@ -1,0 +1,17 @@
+{
+  "services": {
+    "frontend": {
+      "root": "frontend",
+      "buildCommand": "VITE_API_URL= npm run build",
+      "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+    },
+    "backend": {
+      "root": "backend",
+      "entrypoint": "index.ts"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": { "service": "backend" } },
+    { "source": "/(.*)", "destination": { "service": "frontend" } }
+  ]
+}

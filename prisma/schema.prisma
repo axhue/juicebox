@@ -1,0 +1,179 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client"
+  output   = "../backend/generated/prisma"
+}
+
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// =============================
+// ENUMS
+// =============================
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum Category {
+  DAIRY
+  MEAT_SEAFOOD
+  PRODUCE
+  PANTRY
+  FROZEN
+  BEVERAGES
+  HEALTH_BEAUTY
+  HOUSEHOLD
+}
+
+enum Unit {
+  KG
+  G
+  L
+  ML
+  LBS
+  OZ
+  UNIT
+}
+
+// =============================
+// ITEMS TABLE
+// Static - rarely changes
+// =============================
+
+model Item {
+  id          String   @id @default(uuid())
+  productName String   @map("product_name")
+  brand       String
+  barcodeSku  String?  @map("barcode_sku")
+  category    Category
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  priceEntries PriceEntry[]
+
+  @@index([productName])
+  @@index([brand])
+  @@index([barcodeSku])
+  @@map("items")
+}
+
+// =============================
+// STORE LOCATIONS TABLE
+// Static - rarely changes
+// =============================
+
+model StoreLocation {
+  id         String   @id @default(uuid())
+  storeName  String   @map("store_name")
+  storeGroup String   @map("store_group")
+  address    String
+  city       String
+  province   String
+  postalCode String   @map("postal_code")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  priceEntries PriceEntry[]
+  userStores   UserStore[]
+
+  @@index([storeName])
+  @@index([city])
+  @@index([province])
+  @@map("store_locations")
+}
+
+// =============================
+// PRICE ENTRIES TABLE
+// Dynamic - grows constantly
+// =============================
+
+model PriceEntry {
+  id            String   @id @default(uuid())
+  itemId        String   @map("item_id")
+  locationId    String   @map("location_id")
+  price         Decimal  @db.Decimal(10, 2)
+  weight        Decimal  @db.Decimal(10, 3)
+  unit          Unit
+  pricePerKg    Decimal  @map("price_per_kg") @db.Decimal(10, 2)
+  datetime      DateTime @default(now())
+  notes         String?
+  entryByUserId String   @map("entry_by_user_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  item     Item          @relation(fields: [itemId], references: [id])
+  location StoreLocation @relation(fields: [locationId], references: [id])
+  user     User          @relation(fields: [entryByUserId], references: [id])
+
+  @@index([itemId])
+  @@index([locationId])
+  @@index([datetime])
+  @@index([itemId, locationId, datetime])
+  @@map("price_entries")
+}
+
+// =============================
+// USERS TABLE
+// =============================
+
+model User {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  role        Role     @default(USER)
+  householdId String?  @map("household_id")
+  location    String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  household    Household?   @relation(fields: [householdId], references: [id])
+  priceEntries PriceEntry[]
+  userStores   UserStore[]
+
+  @@index([email])
+  @@index([householdId])
+  @@map("users")
+}
+
+// =============================
+// HOUSEHOLDS TABLE
+// =============================
+
+model Household {
+  id            String   @id @default(uuid())
+  householdName String   @map("household_name")
+  createdBy     String   @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  // Relations
+  members User[]
+
+  @@map("households")
+}
+
+// =============================
+// USER STORES TABLE
+// Junction table for My Stores
+// =============================
+
+model UserStore {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  locationId String   @map("location_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user     User          @relation(fields: [userId], references: [id])
+  location StoreLocation @relation(fields: [locationId], references: [id])
+
+  @@unique([userId, locationId])
+  @@index([userId])
+  @@map("user_stores")
+}

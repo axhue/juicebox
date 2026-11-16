@@ -1,0 +1,10 @@
+.vercel
+.env*
+!.env.example
+node_modules
+dist
+.DS_Store
+.claude/settings.local.json
+supabase/.temp
+supabase/.branches
+/generated
